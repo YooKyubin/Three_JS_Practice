@@ -4,7 +4,7 @@ import Stats from 'three/addons/libs/stats.module.js';
 // import { tslFn, uniform, texture, instanceIndex, float, vec3, storage, SpriteNodeMaterial, If } from 'three/nodes';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const numParticles = 1000;
+const numParticles = 100;
 
 let container, controls, stats;
 let camera, scene, renderer;
@@ -35,7 +35,7 @@ function init() {
     velocity = new Float32Array( numParticles * 3 );
 
     // random line generate
-    let origin = {x:0, y:10, z:0};
+    let origin = {x:0, y:20, z:0};
     let t1 = {x:0, y:0, z:0};
     
 
@@ -75,11 +75,14 @@ function init() {
     };
     console.log("explotsionLoc : ", explosionLoc);
     
-    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const cubeMaterial = new THREE.MeshBasicMaterial( {color: 0xffffff} );
-    var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cube.position.set(explosionLoc.x, explosionLoc.y, explosionLoc.z);
-    scene.add(cube);
+    //cube
+    {
+        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const cubeMaterial = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(explosionLoc.x, explosionLoc.y, explosionLoc.z);
+        scene.add(cube);
+    }
 
     for (let i=0; i<numParticles; ++i)
     {
@@ -100,13 +103,17 @@ function init() {
 
 
     // plane
-    const planeGeometry = new THREE.PlaneGeometry(50, 50);
-    const planeMaterial = new THREE.MeshBasicMaterial( {color: 0x5f5f5f, side: THREE.DoubleSide} );
-    planeMaterial.blending = THREE.AdditiveBlending;
-    var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 2; // xz 평면에 위치시킴
-    plane.position.set(0, -10, 0);
-    scene.add(plane);
+    {
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const planeMaterial = new THREE.MeshBasicMaterial( {color: 0x5f5f5f, side: THREE.DoubleSide} );
+        planeMaterial.blending = THREE.AdditiveBlending;
+        var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.lookAt(new THREE.Vector3(0., 1., 0.)); // xz 평면에 위치시킴
+        // plane.lookAt(0., 1., 0.); // xz 평면에 위치시킴
+        // plane.rotation.x = -Math.PI / 2; // xz 평면에 위치시킴
+        plane.position.set(0, -10, 0);
+        scene.add(plane);
+    }
 
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );

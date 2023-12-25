@@ -47,6 +47,8 @@
         void main() {
 
             gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+            //gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4(150, 0, 0,0));
+            // gl_FragColor = ( vec4(1.0, 0, 0, 0) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ));
 
         }
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bloom test</title>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.2/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@latest/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@latest/examples/jsm/",
+                "three/nodes": "https://unpkg.com/three@latest/examples/jsm/nodes/Nodes.js"
+              }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="info">
+        <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - webgl particles waves example
+    </div>
+
+    <script id="gbuffer-vert" type="x-shader/x-vertex">
+        in vec3 position;
+        in vec3 normal;
+        in vec2 uv;
+
+        out vec3 vNormal;
+        out vec2 vUv;
+
+        uniform mat4 modelViewMatrix;
+        uniform mat4 projectionMatrix;
+        uniform mat3 normalMatrix;
+
+        void main() {
+
+            vUv = uv;
+
+            // get smooth normals
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+            vec3 transformedNormal = normalMatrix * normal;
+            vNormal = normalize( transformedNormal );
+
+            gl_Position = projectionMatrix * mvPosition;
+
+        }
+    </script>
+    <script id="gbuffer-frag" type="x-shader/x-fragment">
+        precision highp float;
+        precision highp int;
+
+        layout(location = 0) out vec4 gColor;
+        layout(location = 1) out vec4 gNormal;
+
+        uniform sampler2D tDiffuse;
+        uniform vec2 repeat;
+        uniform vec3 color;
+
+        in vec3 vNormal;
+        in vec2 vUv;
+
+        void main() {
+
+            // write color to G-Buffer
+            gColor = texture( tDiffuse, vUv * repeat );
+
+            // write normals to G-Buffer
+            gNormal = vec4( normalize( vNormal ), 0.0 );
+
+        }
+    </script>
+
+    <script src="./src/js/bloomtest.js" type="module"></script>
+</body>
+</html>

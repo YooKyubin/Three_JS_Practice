@@ -54,6 +54,7 @@ bloomComposer.renderToScreen = false;
 bloomComposer.addPass( renderScene );
 bloomComposer.addPass( bloomPass );
 
+
 const mixPass = new ShaderPass(
     new THREE.ShaderMaterial( {
         uniforms: {

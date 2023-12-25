@@ -2,6 +2,10 @@ import * as THREE from 'three';
 
 import Stats from 'three/addons/libs/stats.module.js';
 
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const numParticles = 700;
 
@@ -16,6 +20,14 @@ let windowHalfX = window.innerWidth / 2;
 let windowHalfY = window.innerHeight / 2;
 
 let radius = new Array(numParticles);
+let composer
+
+const params = {
+    threshold: 0,
+    strength: 1,
+    radius: 0.5,
+    exposure: 1
+};
 
 init();
 animate();
@@ -42,36 +54,34 @@ function init() {
         let cur = i * 3;
         // positions[ cur   ] = 20 * Math.cos(i);
         positions[ cur   ] = 0;
-        positions[ cur + 1 ] = -(i / numParticles) * 160 + 80 + Math.random() * 5 - 2.5;
+        positions[ cur + 1 ] = -(i / numParticles) * 160 + 80 + Math.random() * 10 - 5;
         positions[ cur + 2 ] = 0;
 
         cnt += 0.1;
     }
     for ( let i = 0; i< numParticles; i++){
-        scales[i] = 10 + Math.random() * 4 - 2;
+        scales[i] = Math.random()*2 + 0.3;
     }
     for ( let i = 0; i < numParticles; i++){
-        radius[i] = 70 + Math.random() * 5 - 2.5;
+        radius[i] = 70 + Math.random() * 10 - 5;
     }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
     geometry.setAttribute( 'scale', new THREE.BufferAttribute( scales, 1 ) );
 
-    // const vs = readShader("../shaders/wave.vs")
-    // const fs = readShader("../shaders/wave.fs")
-
+  
 
     const material = new THREE.ShaderMaterial( {
 
         uniforms: {
-            color: { value: new THREE.Color( 0xfeefdf ) },
+            color: { value: new THREE.Color( 0xffffff ) },
         },
         vertexShader: document.getElementById( 'waveVS' ).textContent,
         fragmentShader: document.getElementById( 'waveFS' ).textContent
 
     } );
-    material.blending = THREE.AdditiveBlending;
+    // material.blending = THREE.AdditiveBlending; // 지금 블랜딩 필요 없을 듯?
     // material.alphaTest = 0.5;
 
     //
@@ -79,12 +89,38 @@ function init() {
     particles = new THREE.Points( geometry, material );
     scene.add( particles );
 
+    {
+        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const cubeMaterial = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
+        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(0, 0, 0);
+        cube.scale.set(5, 5, 5);
+        scene.add(cube);
+    }
+
     //
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.toneMapping = THREE.ReinhardToneMapping;
     container.appendChild( renderer.domElement );
+
+    const renderScene = new RenderPass( scene, camera );
+
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ));//, 1.5, 0.4, 0.85 );
+    bloomPass.threshold = params.threshold;
+    bloomPass.strength = params.strength;
+    bloomPass.radius = params.radius;
+
+    const outputPass = new OutputPass();
+
+    let multipleRenderTarget = new THREE.WebGLMultipleRenderTargets(window.innerWidth, window.innerHeight, 2);
+    composer = new EffectComposer( renderer );
+    composer.addPass( renderScene );
+    composer.addPass( bloomPass );
+    composer.addPass( outputPass );
+
 
     stats = new Stats();
     container.appendChild( stats.dom );
@@ -129,7 +165,7 @@ function animate() {
 
     render();
     stats.update();
-
+    composer.render();
 }
 
 function render() {
@@ -141,30 +177,7 @@ function render() {
     const positions = particles.geometry.attributes.position.array;
     const scales = particles.geometry.attributes.scale.array;
 
-    let i = 0, j = 0;
 
-    // 위 아래 움직임 cpu로 계산
-    // for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
-
-    //     for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
-
-    //         // positions[ i + 1 ] = ( Math.sin( ( ix + time ) * 0.3 ) * 50 ) +
-    //         //                 ( Math.sin( ( iy + time ) * 0.5 ) * 50 );
-
-    //         positions[   i   ]
-    //         positions[ i + 1 ]
-    //         positions[ i + 2 ]
-
-    //         scales[ j ] = ( Math.sin( ( ix + time ) * 0.3 ) + 1 ) * 20 +
-    //                         ( Math.sin( ( iy + time ) * 0.5 ) + 1 ) * 20;
-
-    //         i += 3;
-    //         j ++;
-
-    //     }
-
-    // }
-    
     for ( let i = 0; i < numParticles; i++ ) {
         let cur = i * 3;
         let nx = positions[ cur     ] ;
@@ -191,7 +204,7 @@ function render() {
     particles.geometry.attributes.position.needsUpdate = true;
     particles.geometry.attributes.scale.needsUpdate = true;
 
-    renderer.render( scene, camera );
+    // renderer.render( scene, camera );
 
     time += 0.005;
 
@@ -206,3 +219,7 @@ function readShader(path){
         console.log(err);
     };
 }
+
+
+// bloom selective는 메테리얼을 껏다 켯다 하면서 구현하고 있음
+// learn opegnl이랑 비교해서 구현이 어떻게 다른지 확인

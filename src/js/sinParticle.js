@@ -115,7 +115,6 @@ function init() {
 
     const outputPass = new OutputPass();
 
-    let multipleRenderTarget = new THREE.WebGLMultipleRenderTargets(window.innerWidth, window.innerHeight, 2);
     composer = new EffectComposer( renderer );
     composer.addPass( renderScene );
     composer.addPass( bloomPass );

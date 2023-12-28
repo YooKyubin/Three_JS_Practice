@@ -23,7 +23,7 @@
         <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - webgl particles waves example
     </div>
 
-    <script id="gbuffer-vert" type="x-shader/x-vertex">
+    <script id="bloom-vert" type="x-shader/x-vertex">
         in vec3 position;
         in vec3 normal;
         in vec2 uv;
@@ -49,15 +49,15 @@
 
         }
     </script>
-    <script id="gbuffer-frag" type="x-shader/x-fragment">
+    <script id="bloom-frag" type="x-shader/x-fragment">
         precision highp float;
         precision highp int;
 
-        layout(location = 0) out vec4 gColor;
-        layout(location = 1) out vec4 gNormal;
+        layout(location = 0) out vec4 general;
+        layout(location = 1) out vec4 bloom;
 
-        uniform sampler2D tDiffuse;
-        uniform vec2 repeat;
+        // uniform sampler2D tDiffuse;
+        // uniform vec2 repeat;
         uniform vec3 color;
 
         in vec3 vNormal;
@@ -65,14 +65,81 @@
 
         void main() {
 
-            // write color to G-Buffer
-            gColor = texture( tDiffuse, vUv * repeat );
-
-            // write normals to G-Buffer
-            gNormal = vec4( normalize( vNormal ), 0.0 );
+            general = vec4( color - vec3(1.0), 1.0 );
+            bloom = vec4( color - vec3(1.0), 1.0 );
 
         }
     </script>
+
+    
+    <script type="x-shader/x-vertex" id="discard-vert">
+
+        varying vec2 vUv;
+
+        void main() {
+
+            vUv = uv;
+
+            gl_Position = vec4( position , 1.0 );
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="discard-frag">
+
+        uniform sampler2D result;
+
+        varying vec2 vUv;
+
+        void main() {
+            
+            vec4 temp = texture2D( result, vUv ) - vec4(1.0, 1.0, 1.0, 0);
+
+            if (temp.x < 0.0) 
+                temp.x = 0.0;
+
+            if (temp.y < 0.0) 
+                temp.y = 0.0;
+
+            if (temp.z < 0.0) 
+                temp.z = 0.0;
+
+            gl_FragColor = temp; // 1.0 이상의 값들만 -1 해서 가지고 있음
+        }
+
+    </script>
+
+
+    <script type="x-shader/x-vertex" id="mixPass-vert">
+
+        varying vec2 vUv;
+
+        void main() {
+
+            vUv = uv;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="mixPass-frag">
+
+        uniform sampler2D baseTexture;
+        uniform sampler2D bloomTexture;
+
+        varying vec2 vUv;
+
+        void main() {
+
+            gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+        }
+
+    </script>
+
 
     <script src="./src/js/bloomtest.js" type="module"></script>
 </body>

@@ -14,7 +14,7 @@ const params = {
     exposure: 1
 };
 
-const numParticles = 10;
+const numParticles = 20;
 
 let container, controls, stats;
 let camera, scene, renderer;
@@ -34,7 +34,7 @@ let luminance = new THREE.Color( 50.0, 50.0, 50.0 );
 
 let hitPosition;
 const Clock = new THREE.Clock();
-let duration = 0.5;
+let duration = 2;
 
 init();
 animate();
@@ -79,9 +79,9 @@ function init() {
         const vertices = [];
         for (let i=0; i<numParticles; ++i)
         {
-            const x = Math.random() - 0.5;
-            const y = Math.random() - 0.5;
-            const z = Math.random() - 0.5;
+            const x = Math.random() * 0.2 - 0.1;
+            const y = Math.random() * 0.2 - 0.1;
+            const z = Math.random() * 0.2 - 0.1;
 
             vertices.push(x, y, z);
             let temp = new THREE.Vector3(x, y, z);
@@ -95,7 +95,7 @@ function init() {
 
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute(vertices, 3));
-        const material = new THREE.PointsMaterial( { color: new THREE.Color(1.0, 0.0, 1.0) } );
+        const material = new THREE.PointsMaterial( { color: new THREE.Color(1.0, 1.0, 1.0) } );
         material.size = 0.1;
         material.depthTest = false;
         let hitCenter = new THREE.Points( geometry, material );
@@ -103,15 +103,15 @@ function init() {
         hitPosition.add( hitCenter );
     }
    // center
-   {
-       const geometry = new THREE.BufferGeometry();
-       geometry.setAttribute( 'position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
-       const material = new THREE.PointsMaterial( { color: luminance } );
-       material.size = 0.05;
-       material.depthTest = false;
-       let hitCenter = new THREE.Points( geometry, material );
-       hitPosition.add( hitCenter );
-   }
+    {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
+        const material = new THREE.PointsMaterial( { color: luminance } );
+        material.size = 0.05;
+        material.depthTest = false;
+        let hitCenter = new THREE.Points( geometry, material );
+        hitPosition.add( hitCenter );
+    }
 
 
 
@@ -192,15 +192,19 @@ function render() {
 
 function Update()
 {
+    const term = 0.5;
     const dt = Clock.getDelta();
-    if (time >= duration)
+    if (time >= duration + term || time < term)
     {
         // console.log(time);
         // console.log('delta time : ' + dt);
     }
     else
     {
-        const speed = -2 * time + duration * 2;
+        // 설정한 거리를 설정한 시간에 도달할 수 있도록 통제하는 코드를 만들어야 함
+        let mytime = time - term;
+        const speed = -(mytime - duration) * (mytime - duration) * (mytime - duration); // 세제곱 그래프
+        // const speed = -(mytime - duration);
         const positions = hitPosition.getObjectByName('particle').geometry.attributes.position.array;
         for (let i=0; i<numParticles; ++i)
         {

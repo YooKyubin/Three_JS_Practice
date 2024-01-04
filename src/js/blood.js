@@ -17,6 +17,8 @@ let windowHalfY = window.innerHeight / 2;
 let explosionLoc;
 let velocity;
 
+const identity = new THREE.Vector3(1.0);
+
 init();
 animate();
 
@@ -35,13 +37,9 @@ function init() {
     velocity = new Float32Array( numParticles * 3 );
 
     // random line generate
-    let origin = {x:0, y:20, z:0};
-    let t1 = {x:0, y:0, z:0};
-    
+    let origin = new THREE.Vector3(0, 20, 0);
+    let t1 = origin.clone().add(new THREE.Vector3(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5));
 
-    t1.x = origin.x + Math.random() * 10 - 5;
-    t1.y = origin.y + Math.random() * 10 - 5;
-    t1.z = origin.z + Math.random() * 10 - 5;
     
     console.log(origin);
     console.log(t1);
@@ -64,15 +62,16 @@ function init() {
     particles = new THREE.Points( geometry, material );
     scene.add( particles );
 
-    // cal random explostion location
-    let half = {x: (origin.x + t1.x) / 2 , y: (origin.y + t1.y) / 2, z: (origin.z + t1.z) / 2};
+    // calculate random explostion location
+    let half = origin.clone().add(t1).multiplyScalar(1/2);
     console.log(half);
     let perpendicular = generateRandomPerpendicularVector(half);
-    explosionLoc = {
-        x: half.x + perpendicular.x, 
-        y: half.y + perpendicular.y * (perpendicular.y > 0 ? -1 : 1), // 항상 아래쪽에서 폭발핟도록 (연출))
-        z: half.z + perpendicular.z
-    };
+    // explosionLoc = {
+    //     x: half.x + perpendicular.x, 
+    //     y: half.y + perpendicular.y * (perpendicular.y > 0 ? -1 : 1), // 항상 아래쪽에서 폭발핟도록 (연출))
+    //     z: half.z + perpendicular.z
+    // };
+    explosionLoc = half.clone().add(perpendicular);
     console.log("explotsionLoc : ", explosionLoc);
     
     //cube
@@ -89,16 +88,16 @@ function init() {
         let cur = i * 3;
         let noise = Math.random() * 3 + 0;
     
-        let initVec = {
-            x: positions[ cur     ] - explosionLoc.x + noise,
-            y: positions[ cur + 1 ] - explosionLoc.y + noise,
-            z: positions[ cur + 2 ] - explosionLoc.z + noise
-        };
-        let size = getLength(initVec);
+        let initVec = new THREE.Vector3(
+            positions[ cur     ] - explosionLoc.x + noise,
+            positions[ cur + 1 ] - explosionLoc.y + noise,
+            positions[ cur + 2 ] - explosionLoc.z + noise
+        );
+        let size = initVec.length();
 
-        velocity[ cur     ] = initVec.x / size * 2;
-        velocity[ cur + 1 ] = initVec.y / size * 2;
-        velocity[ cur + 2 ] = initVec.z / size * 2;
+        velocity[ cur     ] = initVec.x / size * 2 / 8;
+        velocity[ cur + 1 ] = initVec.y / size * 2 / 8;
+        velocity[ cur + 2 ] = initVec.z / size * 2 / 8;
     }
 
 
@@ -179,7 +178,7 @@ function render() {
     // camera.position.y += ( - mouseY - camera.position.y ) * .05;
     camera.lookAt( scene.position );
     
-    const gravity = -0.098;
+    const gravity = -0.0098;
     const positions = particles.geometry.attributes.position.array;
     
     for ( let i = 0; i < numParticles; i++ ) {
@@ -189,12 +188,12 @@ function render() {
             continue;
 
         velocity[ cur     ];
-        velocity[ cur + 1 ] += gravity;
+        velocity[ cur + 1 ] += gravity * time;
         velocity[ cur + 2 ];
 
-        positions[ cur     ] += velocity[ cur     ] * 0.1;
-        positions[ cur + 1 ] += velocity[ cur + 1 ] * 0.1;
-        positions[ cur + 2 ] += velocity[ cur + 2 ] * 0.1;
+        positions[ cur     ] += velocity[ cur     ] * time;
+        positions[ cur + 1 ] += velocity[ cur + 1 ] * time;
+        positions[ cur + 2 ] += velocity[ cur + 2 ] * time;
 
     }
 
@@ -202,46 +201,22 @@ function render() {
 
     renderer.render( scene, camera );
 
-    time += 0.005;
+    time += 0.05;
 
-}
-
-function readShader(path){
-    try{
-        const text = fetch(path).then((res) => res.text())
-        console.log(text);
-        return text;
-    } catch(err) {
-        console.log(err);
-    };
-}
-
-function getLength(given)
-{
-    return Math.sqrt(given.x**2 + given.y**2 + given.z**2);
-}
-
-function crossProduct(v1, v2) {
-    return {
-        x: v1.y * v2.z - v1.z * v2.y,
-        y: v1.z * v2.x - v1.x * v2.z,
-        z: v1.x * v2.y - v1.y * v2.x
-    };
 }
 
 function generateRandomPerpendicularVector( givenVector )
 {
-    var randomVector = { x: Math.random(), y: Math.random(), z: Math.random() };
+    var randomVector = new THREE.Vector3(Math.random(), Math.random(), Math.random());
     
     // 주어진 벡터와 수직인 벡터를 찾기 위한 외적 계산
-    var perpendicularVector = crossProduct(givenVector, randomVector);
+    var perpendicularVector = givenVector.clone().cross(randomVector);
 
     // 크기를 조절하여 길이가 length가 되도록
     let length = Math.random() * 1.0 + 0.1;
-    var scaleFactor = length / getLength(perpendicularVector);
-    perpendicularVector.x *= scaleFactor;
-    perpendicularVector.y *= scaleFactor;
-    perpendicularVector.z *= scaleFactor;
+    var scaleFactor = length / perpendicularVector.length();
+
+    perpendicularVector.multiplyScalar(scaleFactor);
 
     return perpendicularVector;
 }

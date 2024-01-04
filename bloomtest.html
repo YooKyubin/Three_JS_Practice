@@ -96,16 +96,10 @@
             
             vec4 temp = texture2D( result, vUv ) - vec4(1.0, 1.0, 1.0, 0);
 
-            if (temp.x < 0.0) 
-                temp.x = 0.0;
+            temp = clamp(temp, 0.0, 2.0);
 
-            if (temp.y < 0.0) 
-                temp.y = 0.0;
-
-            if (temp.z < 0.0) 
-                temp.z = 0.0;
-
-            gl_FragColor = temp; // 1.0 이상의 값들만 -1 해서 가지고 있음
+            // gl_FragColor = temp; // 1.0 이상의 값들만 -1 해서 가지고 있음
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         }
 
     </script>
@@ -134,7 +128,11 @@
 
         void main() {
 
-            gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+            vec4 baseColor = texture2D( baseTexture, vUv );
+            vec4 bloomColor = vec4( 1.0 ) * texture2D( bloomTexture, vUv );
+            // gl_FragColor = baseColor + bloomColor;
+            // gl_FragColor = baseColor ;
+            gl_FragColor = bloomColor;
 
         }
 

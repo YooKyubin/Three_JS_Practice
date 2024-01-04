@@ -23,7 +23,7 @@ let radius = new Array(numParticles);
 let composer
 
 const params = {
-    threshold: 0,
+    threshold: 1,
     strength: 1,
     radius: 0.5,
     exposure: 1
@@ -75,7 +75,7 @@ function init() {
     const material = new THREE.ShaderMaterial( {
 
         uniforms: {
-            color: { value: new THREE.Color( 0xffffff ) },
+            color: { value: new THREE.Color( 1.0, 1.0, 5.0 ) },
         },
         vertexShader: document.getElementById( 'waveVS' ).textContent,
         fragmentShader: document.getElementById( 'waveFS' ).textContent

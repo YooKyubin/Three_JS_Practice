@@ -14,27 +14,21 @@ const params = {
     exposure: 1
 };
 
-const numParticles = 20;
 
 let container, controls, stats;
 let camera, scene, renderer;
-
-let particles, time = 0;
-
-let windowHalfX = window.innerWidth / 2;
-let windowHalfY = window.innerHeight / 2;
-
-let explosionLoc;
-let initVelocity = [];
-
 let composer
-
-const identity = new THREE.Vector3(1.0);
-let luminance = new THREE.Color( 50.0, 50.0, 50.0 );
-
-let hitPosition;
 const Clock = new THREE.Clock();
-let duration = 2;
+
+let time = 0;
+
+const numParticles = 20;
+let particleStart = [];
+let particleEnd = [];
+let initVelocity = [];
+let hitPosition;
+let luminance = new THREE.Color( 30.0, 30.0, 30.0 );
+let duration = 1;
 
 init();
 animate();
@@ -67,15 +61,15 @@ function init() {
         );
 
     /*
-    순서 중요! particle -> center 순서로 그리기
-    particle, center 둘 다 depth test를 하지 않아서 
-    center 를 먼저 그리면 particle에 의해 가려지게 되어
-    bloom 효과가 없어짐
-    
-    꼭 순서 안지켜도 할 수 있는 방법이 있을텐데..
+        순서 중요! particle -> center 순서로 그리기
+        particle, center 둘 다 depth test를 하지 않아서 
+        center 를 먼저 그리면 particle에 의해 가려지게 되어
+        bloom 효과가 없어짐
+        
+        꼭 순서 안지켜도 할 수 있는 방법이 있을텐데..
     */
-   // particle
-   {
+    // particle
+    {
         const vertices = [];
         for (let i=0; i<numParticles; ++i)
         {
@@ -85,39 +79,35 @@ function init() {
 
             vertices.push(x, y, z);
             let temp = new THREE.Vector3(x, y, z);
-            console.log('temp : ' , temp);
-            console.log('normalize : ' , temp.normalize());
-            initVelocity.push(temp);
-            console.log(initVelocity[i]);
-            console.log(initVelocity[i].x);
-            console.log(initVelocity[i].y);
+            initVelocity.push(temp.clone().normalize());
+
+            particleStart.push(temp); // 처음 위치
+            particleEnd.push(temp.clone().normalize().multiplyScalar(3)); // 처음위치에서 방향그대로 길이 5 만큼 증가
         }
 
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute(vertices, 3));
         const material = new THREE.PointsMaterial( { color: new THREE.Color(1.0, 1.0, 1.0) } );
-        material.size = 0.1;
+        material.size = 0.2;
         material.depthTest = false;
-        let hitCenter = new THREE.Points( geometry, material );
-        hitCenter.name = 'particle';
-        hitPosition.add( hitCenter );
+        let hitParticle = new THREE.Points( geometry, material );
+        hitParticle.name = 'particle';
+        hitPosition.add( hitParticle );
     }
-   // center
+    // center
     {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
         const material = new THREE.PointsMaterial( { color: luminance } );
-        material.size = 0.05;
+        material.size = 0.1;
         material.depthTest = false;
         let hitCenter = new THREE.Points( geometry, material );
+        hitCenter.name = 'center';
         hitPosition.add( hitCenter );
     }
 
 
-
-    
-
-    
+    // -------------------------------------------------------
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -181,48 +171,80 @@ function animate() {
 function render() {
 
     camera.lookAt( scene.position );
+
     
-    // const positions = particles.geometry.attributes.position.array;
-    
-    // renderer.render( scene, camera );
     Update();
+    // renderer.render( scene, camera );
     composer.render();
     
 }
 
 function Update()
 {
-    const term = 0.5;
+    const term = 0.1;
     const dt = Clock.getDelta();
+
+    particleUpdate(term, dt);
+    centerUpdate(term, dt);
+
+    time += dt;
+}
+
+function particleUpdate(term, dt)
+{
+    const particleObj = hitPosition.getObjectByName('particle');
     if (time >= duration + term || time < term)
     {
+        particleObj.visible = false;
         // console.log(time);
         // console.log('delta time : ' + dt);
     }
     else
     {
-        // 설정한 거리를 설정한 시간에 도달할 수 있도록 통제하는 코드를 만들어야 함
-        let mytime = time - term;
-        const speed = -(mytime - duration) * (mytime - duration) * (mytime - duration); // 세제곱 그래프
-        // const speed = -(mytime - duration);
-        const positions = hitPosition.getObjectByName('particle').geometry.attributes.position.array;
+        particleObj.visible = true;
+        // 설정한 거리를 설정한 시간에 도달할 수 있도록 통제하는 코드를 만들어야 함 : lerp
+        let timeElapse = time - term;
+        let t = timeElapse / duration;
+        // t = Math.sin(t * Math.PI * 1/2);
+        t = -pow(t-1, 4) + 1; // (0, 0) , (1, 1)
+
+        const positions = particleObj.geometry.attributes.position.array;
         for (let i=0; i<numParticles; ++i)
         {
-            const displacement = new THREE.Vector3();
             let cur = new THREE.Vector3(positions[i*3], positions[i*3 + 1], positions[i*3 + 2]);
-            displacement.copy(initVelocity[i]).multiplyScalar(speed * dt);
-            console.log(displacement);
-
-            // 속도가 너무 느림
-            positions[ i*3   ] += displacement.x;
-            positions[ i*3+1 ] += displacement.y;
-            positions[ i*3+2 ] += displacement.z;
+            cur.lerpVectors(particleStart[i], particleEnd[i], t);
+            
+            positions[ i*3   ] = cur.x;
+            positions[ i*3+1 ] = cur.y;
+            positions[ i*3+2 ] = cur.z;
         }
-    }
-    // y = -x + duration;
 
+        // particleObj.material.size = ;
+    }
     
-    time += dt;
     hitPosition.getObjectByName('particle').geometry.attributes.position.needsUpdate = true;
-        
+}
+
+function centerUpdate(term, dt)
+{
+    const CenterObj = hitPosition.getObjectByName('center');
+    // console.log(CenterObj.material.color);
+    if (time > term)
+    {
+        // hitPosition.getObjectByName('center').material.color = new THREE.Color(0x00ff00);
+        CenterObj.visible = false;
+    }
+    // hitPosition.getObjectByName('center').material.color.addScalar(-1.0);
+
+    // hitPosition.getObjectByName('center').material.needsUpdate = true; // 이거 필요없?음
+}
+
+function pow(val, exp)
+{
+    let ret = 1;
+    for (let i=0; i<exp; ++i)
+    {
+        ret *= val;
+    }
+    return ret;
 }

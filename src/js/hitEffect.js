@@ -22,10 +22,11 @@ const Clock = new THREE.Clock();
 
 let time = 0;
 
-const numParticles = 20;
+const numParticles = 10;
 let particleStart = [];
 let particleEnd = [];
 let initVelocity = [];
+let particleInitSize = 0.5;
 let hitPosition;
 let luminance = new THREE.Color( 30.0, 30.0, 30.0 );
 let duration = 1;
@@ -88,7 +89,7 @@ function init() {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute(vertices, 3));
         const material = new THREE.PointsMaterial( { color: new THREE.Color(1.0, 1.0, 1.0) } );
-        material.size = 0.2;
+        material.size = particleInitSize;
         material.depthTest = false;
         let hitParticle = new THREE.Points( geometry, material );
         hitParticle.name = 'particle';
@@ -206,7 +207,7 @@ function particleUpdate(term, dt)
         let timeElapse = time - term;
         let t = timeElapse / duration;
         // t = Math.sin(t * Math.PI * 1/2);
-        t = -pow(t-1, 4) + 1; // (0, 0) , (1, 1)
+        t = -pow(t-1, 4) + 1; // (0, 0) , (1, 1) : 0~1 4제곱 그래프
 
         const positions = particleObj.geometry.attributes.position.array;
         for (let i=0; i<numParticles; ++i)
@@ -219,10 +220,12 @@ function particleUpdate(term, dt)
             positions[ i*3+2 ] = cur.z;
         }
 
-        // particleObj.material.size = ;
+        //lerp 그냥 구현, three js 에 float lerp 가 있는지 모르겠음
+        particleObj.material.size = particleInitSize - ( particleInitSize - 0.0 ) * t; 
     }
     
-    hitPosition.getObjectByName('particle').geometry.attributes.position.needsUpdate = true;
+   particleObj.geometry.attributes.position.needsUpdate = true;
+   particleObj.material.needsUpdate = true;
 }
 
 function centerUpdate(term, dt)

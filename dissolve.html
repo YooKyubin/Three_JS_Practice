@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dissolve</title>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.2/dist/es-module-shims.js"></script>
+
+</head>
+
+<body>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@latest/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@latest/examples/jsm/",
+                "three/nodes": "https://unpkg.com/three@latest/examples/jsm/nodes/Nodes.js"
+              }
+        }
+    </script>
+    <div id="info">
+        <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - dissolve Effect
+    </div>
+
+
+
+    <script type="x-shader/x-vertex" id="dissolveVS">
+
+        // attribute vec3 uv;
+
+        out vec2 texCoord;
+        out vec3 normalMap;
+
+        void main() {
+
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+            gl_Position = projectionMatrix * mvPosition;
+
+            texCoord = uv;
+            normalMap = normal;
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="dissolveFS">
+
+        in vec2 texCoord;
+        in vec3 normalMap;
+
+        uniform vec3 color;
+        uniform sampler2D noise;
+        uniform float split;
+        uniform float glowSize;
+
+        void main() {
+            
+            vec4 noiseTex = texture( noise, texCoord );
+            float alpha = step( noiseTex.r, split );
+            float glow = step(noiseTex.r, split - glowSize);
+            glow = alpha - glow;
+            vec3 glowColor = glow * vec3(1.0);
+            
+
+            if (alpha == 1.0)
+            {
+                gl_FragColor = vec4(color + glowColor, 1.0);
+                // if (glow == 1.0) 
+                // {
+                //     gl_FragColor = vec4(1.1, 1.1, 1.1, 1.0);
+                // }
+                // else
+                // {
+                //     gl_FragColor = vec4(color, 1.0);
+                // }
+            }
+            else
+            {
+                discard;
+            }
+
+        }
+
+    </script>
+
+    <script src="./src/js/dissolve.js" type="module"></script>
+</body>
+</html>

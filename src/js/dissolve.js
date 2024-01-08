@@ -71,6 +71,7 @@ function init() {
 
         } );
 
+        // material.side = THREE.DoubleSide;
         cube2 = new THREE.Mesh( geometry, material );
         cube2.position.set(-1, 0, 0);
         scene.add( cube2 );
@@ -189,6 +190,7 @@ function guiUpdate()
     bloomPass.exposure = params.exposure;
 
     cube2.material.uniforms.split.value = Math.sin(time) * 0.5 + 0.5;
+    // cube2.material.uniforms.split.value = params.split;
     console.log('split : ', params.split);
     console.log('material : ', cube2.material.uniforms.split);
     cube2.material.needsUpdate = true;

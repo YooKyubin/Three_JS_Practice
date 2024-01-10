@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Effect } from './Effect.js';
 
 /*
     순서 중요! particle -> center 순서로 그리기
@@ -10,11 +11,12 @@ import * as THREE from 'three';
 */
 
 const numParticles = 10;
-class hitEffect
+class hitEffect extends Effect
 {
     object = new THREE.Object3D();
     duration = 1;
-    targetPosition = new THREE.Vector3();
+    targetPosition = new THREE.Vector3(0, 0, 0);
+    active = false;
 
     particleStart = [];
     particleEnd = [];
@@ -26,10 +28,16 @@ class hitEffect
 
     timeElapse = 0;
 
-    constructor( target )
+    constructor( )
     {
-        this.targetPosition = target.position;
+        super();
         this.#init();
+        this.SetActive( false );
+    }
+
+    Instantiate()
+    {
+        return new hitEffect();
     }
 
     #init()
@@ -37,12 +45,32 @@ class hitEffect
         this.#particleInit();
         this.#centerInit();
 
+        this.SetPosition(this.targetPosition);
+    }
+    
+    SetPosition(vec3)
+    {        
         this.object.position.set(
-            this.targetPosition.x + Math.random() * 0.2 - 0.1, 
-            this.targetPosition.y + Math.random() * 0.2 - 0.1, 
-            this.targetPosition.z + Math.random() * 0.2 - 0.1
+            vec3.x + Math.random() * 0.2 - 0.1, 
+            vec3.y + Math.random() * 0.2 - 0.1, 
+            vec3.z + Math.random() * 0.2 - 0.1
         );
     }
+
+    SetActive(active)
+    {
+        this.active = active;
+
+        if (active)
+        {
+            this.object.visible = true;
+        }
+        else
+        {
+            this.object.visible = false;
+        }
+    }
+    GetActive() { return this.active; }
 
     #particleInit()
     {
@@ -85,23 +113,51 @@ class hitEffect
 
     Update(dt)
     {
-        const term = 0.1;
-        // const dt = Clock.getDelta();
-    
-        this.#particleUpdate(term, dt);
-        this.#centerUpdate(term, dt);
-    
-        this.timeElapse += dt;
+        if (this.active)
+        {
+            if (this.timeElapse >= this.duration)
+            {
+                this.SetActive(false);
+                this.Reset();
+                return;
+            }
+
+            const term = 0.05;
+            // const dt = Clock.getDelta();
+            
+            this.#particleUpdate(term, dt);
+            this.#centerUpdate(term, dt);
+            
+            this.timeElapse += dt;
+        }
+    }
+
+    Reset()
+    {
+        // console.log("RESET");
+        const particleObj = this.object.getObjectByName('particle');
+        const positions = particleObj.geometry.attributes.position.array;
+        for (let i=0; i<numParticles; ++i)
+        {   
+            positions[ i*3   ] = this.particleStart.x;
+            positions[ i*3+1 ] = this.particleStart.y;
+            positions[ i*3+2 ] = this.particleStart.z;
+        }
+        particleObj.visible = true;
+
+        const CenterObj = this.object.getObjectByName('center');
+        CenterObj.visible = true;
+
+        this.timeElapse = 0;
     }
 
     #particleUpdate(term, dt)
     {
+        // console.log("PARTICLE UPDATE")
         const particleObj = this.object.getObjectByName('particle');
         if (this.timeElapse >= this.duration + term || this.timeElapse < term)
         {
             particleObj.visible = false;
-            // console.log(time);
-            // console.log('delta time : ' + dt);
         }
         else
         {
@@ -137,12 +193,9 @@ class hitEffect
         // console.log(CenterObj.material.color);
         if (this.timeElapse > term)
         {
-            // hitPosition.getObjectByName('center').material.color = new THREE.Color(0x00ff00);
             CenterObj.visible = false;
         }
-        // hitPosition.getObjectByName('center').material.color.addScalar(-1.0);
-
-        // hitPosition.getObjectByName('center').material.needsUpdate = true; // 이거 필요없?음
+    
     }
 }
 

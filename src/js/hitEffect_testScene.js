@@ -8,6 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { hitEffect } from './hitEffect.js';
+import { objectPool } from './objectPool.js';
 
 const params = {
     threshold: 1,
@@ -24,16 +25,10 @@ const Clock = new THREE.Clock();
 
 let time = 0;
 
-const numParticles = 10;
-let particleStart = [];
-let particleEnd = [];
-let initVelocity = [];
-let particleInitSize = 0.5;
-let hitPosition;
-let luminance = new THREE.Color( 30.0, 30.0, 30.0 );
-let duration = 1;
+let hitObjectPool;
 
-let effects = [];
+var raycaster, mouse;
+
 
 init();
 animate();
@@ -48,7 +43,13 @@ function init() {
 
     scene = new THREE.Scene();
 
-    hitPosition = new THREE.Object3D();
+    // 레이캐스터 및 마우스 초기화
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // 이벤트 리스너 등록
+    document.addEventListener('mousedown', onMouseDown, false);
+
     // cat
     let cube;
     {
@@ -58,21 +59,24 @@ function init() {
         scene.add( cube );
     }
 
-    
-    hitPosition = new hitEffect(cube);
-    scene.add(hitPosition.object);
 
-    let yAcc = -5;
-    for (let i=-10; i<10; i += 3)
+
+    hitObjectPool = new objectPool(new hitEffect(), 20);
+
+    for (let i=-10; i<10; i += 6)
     {
-        for (let j=-10; j<10; j+=3)
+        for (let j=-10; j<10; j+=6)
         {
-            let y = 1/2 * i + -1/2 * j;
-            cube.position.set(i, y, j);
-            let temp = new hitEffect(cube);
-            effects.push(temp);
-            scene.add(temp.object);
-            yAcc += 0.5
+            let y = 1/4 * i + -1/2 * j + 2;
+            let temp = hitObjectPool.GetObject(new THREE.Vector3(i, y, j));
+            if (temp != null)
+            {
+                console.log('object : ', temp.object);
+                scene.add( temp.object );
+            }
+            let tempcube = cube.clone();
+            tempcube.position.set(i, y, j);
+            scene.add( tempcube );
         }
     }
 
@@ -155,11 +159,34 @@ function Update()
     const term = 0.1;
     const dt = Clock.getDelta();
 
-    hitPosition.Update(dt);
-    for (let i =0; i<effects.length; ++i)
-    {
-        effects[i].Update(dt);
-    }
+    hitObjectPool.Update(dt);
 
     time += dt;
+}
+
+function onMouseDown(event) {
+    // chat GPT야 고마워~
+    // 마우스 클릭 이벤트에서 정규화된 디바이스 좌표를 얻음
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // 레이캐스터를 업데이트하고 광선을 생성
+    raycaster.setFromCamera(mouse, camera);
+
+    // 광선과의 교차점을 찾음
+    var intersects = raycaster.intersectObjects(scene.children);
+
+    if (intersects.length > 0) {
+        // 첫 번째 교차점의 월드 좌표 출력
+        console.log('클릭한 위치의 월드 좌표:', intersects[0].point);
+
+
+        let temp = hitObjectPool.GetObject(intersects[0].point);
+        if (temp != null)
+        {
+            console.log('object : ', temp.object);
+            scene.add( temp.object );
+        }
+
+    }
 }

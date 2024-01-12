@@ -7,7 +7,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { hitEffect } from './hitEffect.js';
+import { blood } from './blood.js';
 import { objectPool } from './objectPool.js';
 
 const params = {
@@ -62,7 +62,7 @@ function init() {
 
 
 
-    hitObjectPool = new objectPool(new hitEffect(), 20);
+    hitObjectPool = new objectPool(new blood(), 20);
 
     for (let i=-10; i<10; i += 6)
     {

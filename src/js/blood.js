@@ -1,208 +1,170 @@
 import * as THREE from 'three';
 
 import Stats from 'three/addons/libs/stats.module.js';
-// import { tslFn, uniform, texture, instanceIndex, float, vec3, storage, SpriteNodeMaterial, If } from 'three/nodes';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const numParticles = 100;
 
-let container, controls, stats;
-let camera, scene, renderer;
 
-let particles, time = 0;
-
-let windowHalfX = window.innerWidth / 2;
-let windowHalfY = window.innerHeight / 2;
-
-let explosionLoc;
-let velocity;
-
-const identity = new THREE.Vector3(1.0);
-
-init();
-animate();
-
-function init() {
-
-    container = document.createElement( 'div' );
-    document.body.appendChild( container );
-
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.z = 100;
-
-    scene = new THREE.Scene();
+const gravity = -9.8;
+const Clock = new THREE.Clock();
 
 
-    const positions = new Float32Array( numParticles * 3 );
+class blood
+{
+    object = new THREE.Object3D();
+    duration = 1;
+    targetPosition = new THREE.Vector3(0, 0, 0);
+    active = false;
+    
+    timeElapse = 0;
+    
+    particles;
+    particleStart = []
     velocity = new Float32Array( numParticles * 3 );
+    initVelocity = new Float32Array( numParticles * 3 );
 
-    // random line generate
-    let origin = new THREE.Vector3(0, 20, 0);
-    let t1 = origin.clone().add(new THREE.Vector3(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5));
-
-    
-    console.log(origin);
-    console.log(t1);
-
-    let cnt = 0;
-    for ( let i = 0; i < numParticles; i++ ) {
-        let step = (i / numParticles);
-        let cur = i * 3;
-        positions[ cur     ] = origin.x + step * (t1.x - origin.x);
-        positions[ cur + 1 ] = origin.y + step * (t1.y - origin.y);
-        positions[ cur + 2 ] = origin.z + step * (t1.z - origin.z);
+    // virtual function 만드는 법 모름
+    constructor( ) 
+    { 
+        this.#init();
+        this.SetActive( false );
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
-    const material = new THREE.PointsMaterial( { color: 0xff0000, sizeAttenuation: true } );
-
-    //
-
-    particles = new THREE.Points( geometry, material );
-    scene.add( particles );
-
-    // calculate random explostion location
-    let half = origin.clone().add(t1).multiplyScalar(1/2);
-    console.log(half);
-    let perpendicular = generateRandomPerpendicularVector(half);
-    // explosionLoc = {
-    //     x: half.x + perpendicular.x, 
-    //     y: half.y + perpendicular.y * (perpendicular.y > 0 ? -1 : 1), // 항상 아래쪽에서 폭발핟도록 (연출))
-    //     z: half.z + perpendicular.z
-    // };
-    explosionLoc = half.clone().add(perpendicular);
-    console.log("explotsionLoc : ", explosionLoc);
-    
-    //cube
+    Instantiate() 
     {
-        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const cubeMaterial = new THREE.MeshBasicMaterial( {color: 0xffffff} );
-        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.set(explosionLoc.x, explosionLoc.y, explosionLoc.z);
-        scene.add(cube);
+        return new blood();
     }
 
-    for (let i=0; i<numParticles; ++i)
+    #init() 
     {
-        let cur = i * 3;
-        let noise = Math.random() * 3 + 0;
+        this.velocity = new Float32Array( numParticles * 3 );
     
-        let initVec = new THREE.Vector3(
-            positions[ cur     ] - explosionLoc.x + noise,
-            positions[ cur + 1 ] - explosionLoc.y + noise,
-            positions[ cur + 2 ] - explosionLoc.z + noise
+        // random line generate
+        let origin = new THREE.Vector3(0, 0, 0);
+        let t1 = origin.clone().add(new THREE.Vector3(Math.random(), Math.random(), Math.random()));
+        t1.normalize();
+    
+        const vertices = [];
+        for ( let i = 0; i < numParticles; i++ ) {
+            let step = (i / numParticles);
+            const x = origin.x + step * (t1.x - origin.x);
+            const y = origin.y + step * (t1.y - origin.y);
+            const z = origin.z + step * (t1.z - origin.z);
+            
+            vertices.push(x, y, z);
+            let temp = new THREE.Vector3(x, y, z);
+            this.particleStart.push(temp);
+        }
+    
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+        const material = new THREE.PointsMaterial( { color: 0xff0000, sizeAttenuation: true } );
+        material.size = 0.3;
+    
+        this.particles = new THREE.Points( geometry, material );
+    
+        // calculate random explostion location
+        let half = origin.clone().add(t1).multiplyScalar(0.5);
+        let perpendicular = generateRandomPerpendicularVector(half);
+        perpendicular.normalize();
+        let explosionLoc = half.clone().add(perpendicular.multiplyScalar(0.5));
+        console.log("explotsionLoc : ", explosionLoc);
+    
+        for (let i=0; i<numParticles; ++i)
+        {
+            let cur = i * 3;
+            let noise = Math.random() * 1+ 0;
+        
+            let initVec = new THREE.Vector3(
+                vertices[ cur     ] - explosionLoc.x + noise,
+                vertices[ cur + 1 ] - explosionLoc.y + noise,
+                vertices[ cur + 2 ] - explosionLoc.z + noise
+            );
+            initVec.normalize();
+    
+            this.initVelocity[ cur     ] = initVec.x * 4;
+            this.initVelocity[ cur + 1 ] = initVec.y * 4;
+            this.initVelocity[ cur + 2 ] = initVec.z * 4;
+        }
+    }
+
+    SetPosition(vec3)
+    {        
+        this.object.position.set(
+            vec3.x + Math.random() * 0.2 - 0.1, 
+            vec3.y + Math.random() * 0.2 - 0.1, 
+            vec3.z + Math.random() * 0.2 - 0.1
         );
-        let size = initVec.length();
-
-        velocity[ cur     ] = initVec.x / size * 2 / 8;
-        velocity[ cur + 1 ] = initVec.y / size * 2 / 8;
-        velocity[ cur + 2 ] = initVec.z / size * 2 / 8;
     }
 
+    SetActive(active)
+    { 
+        this.active = active;
 
-    // plane
+        if (active)
+        {
+            this.object.visible = true;
+        }
+        else
+        {
+            this.object.visible = false;
+        }
+    }
+    GetActive() { return this.active; }
+
+    Update(dt) 
     {
-        const planeGeometry = new THREE.PlaneGeometry(50, 50);
-        const planeMaterial = new THREE.MeshBasicMaterial( {color: 0x5f5f5f, side: THREE.DoubleSide} );
-        planeMaterial.blending = THREE.AdditiveBlending;
-        var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-        plane.lookAt(new THREE.Vector3(0., 1., 0.)); // xz 평면에 위치시킴
-        // plane.lookAt(0., 1., 0.); // xz 평면에 위치시킴
-        // plane.rotation.x = -Math.PI / 2; // xz 평면에 위치시킴
-        plane.position.set(0, -10, 0);
-        scene.add(plane);
-    }
-
-
-    renderer = new THREE.WebGLRenderer( { antialias: true } );
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    container.appendChild( renderer.domElement );
-
-    stats = new Stats();
-    container.appendChild( stats.dom );
-
-    container.style.touchAction = 'none';
-    // container.addEventListener( 'pointermove', onPointerMove );
-
-    //
-
-    window.addEventListener( 'resize', onWindowResize );
-
-    controls = new OrbitControls( camera, renderer.domElement );
-    controls.minDistance = 5;
-	controls.maxDistance = 70;
-	controls.target.set( 0, - 1, 0 );
-	controls.update();
-
-}
-
-function onWindowResize() {
-
-    windowHalfX = window.innerWidth / 2;
-    windowHalfY = window.innerHeight / 2;
-
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize( window.innerWidth, window.innerHeight );
-
-}
-
-//
-
-function onPointerMove( event ) {
-
-    if ( event.isPrimary === false ) return;
-
-    mouseX = event.clientX - windowHalfX;
-    mouseY = event.clientY - windowHalfY;
-
-}
-
-//
-
-function animate() {
-
-    requestAnimationFrame( animate );
-
-    render();
-    stats.update();
-
-}
-
-function render() {
-
-    // camera.position.x += ( mouseX - camera.position.x ) * .05;
-    // camera.position.y += ( - mouseY - camera.position.y ) * .05;
-    camera.lookAt( scene.position );
+        if (!this.active)
+            return;
     
-    const gravity = -0.0098;
-    const positions = particles.geometry.attributes.position.array;
+        if (this.timeElapse >= this.duration)
+        {
+            this.SetActive(false);
+            this.Reset();
+            return;
+        }
     
-    for ( let i = 0; i < numParticles; i++ ) {
-        let cur = i * 3;
-
-        if (positions[ cur + 1 ] < -10 + 1)
-            continue;
-
-        velocity[ cur     ];
-        velocity[ cur + 1 ] += gravity * time;
-        velocity[ cur + 2 ];
-
-        positions[ cur     ] += velocity[ cur     ] * time;
-        positions[ cur + 1 ] += velocity[ cur + 1 ] * time;
-        positions[ cur + 2 ] += velocity[ cur + 2 ] * time;
-
+        console.log(this.object);
+        const positions = this.object.geometry.attributes.position.array;
+        
+        for ( let i = 0; i < numParticles; i++ ) {
+            let cur = i * 3;
+            
+            if (positions[ cur + 1 ] <= 0)
+            {
+                positions[ cur + 1] = 0;
+                continue;
+            }
+            
+            velocity[ cur     ];
+            velocity[ cur + 1 ] += gravity * dt;
+            velocity[ cur + 2 ];
+            
+            positions[ cur     ] += velocity[ cur     ] * dt;
+            positions[ cur + 1 ] += velocity[ cur + 1 ] * dt;
+            positions[ cur + 2 ] += velocity[ cur + 2 ] * dt;
+        
+        }
+    
+        particles.geometry.attributes.position.needsUpdate = true;
+        
+        timeElapse += dt;
     }
+ 
+    
+    Reset()
+    {
+        this.velocity = this.initVelocity;
+        const positions = this.object.geometry.attributes.position.array;
+        for (let i=0; i<numParticles; ++i)
+        {   
+            positions[ i*3   ] = this.particleStart.x;
+            positions[ i*3+1 ] = this.particleStart.y;
+            positions[ i*3+2 ] = this.particleStart.z;
+        }
 
-    particles.geometry.attributes.position.needsUpdate = true;
-
-    renderer.render( scene, camera );
-
-    time += 0.05;
-
+        this.timeElapse = 0;
+    }
 }
 
 function generateRandomPerpendicularVector( givenVector )
@@ -221,7 +183,4 @@ function generateRandomPerpendicularVector( givenVector )
     return perpendicularVector;
 }
 
-// 지금 구현이 시간에 대한 적분없이 그냥 프레임단위로 해버려서 아주 곤란하다.
-// 수정이 시급하지만 너무 졸리니까 여기까지만
-
-// 그리고 각종 수치들에 대한 하드코딩들도 손봐야겠다.
+export { blood };

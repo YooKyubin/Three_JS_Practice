@@ -45,7 +45,7 @@ class hitEffect extends Effect
         this.#particleInit();
         this.#centerInit();
 
-        this.SetPosition(this.targetPosition);
+        // this.SetPosition(this.targetPosition);
     }
     
     SetPosition(vec3)

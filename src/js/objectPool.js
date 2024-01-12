@@ -45,7 +45,10 @@ class objectPool
         {
             this.pool[i].Update(dt);
             if (this.pool[i].GetActive())
+            {
+                // console.log(this.pool[i]);
                 ++cnt;
+            }
         }
         console.log(cnt);
     }

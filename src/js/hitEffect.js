@@ -63,10 +63,12 @@ class hitEffect extends Effect
 
         if (active)
         {
+            console.log('set active true', this.active);
             this.object.visible = true;
         }
         else
         {
+            console.log('set active false', this.active);
             this.object.visible = false;
         }
     }

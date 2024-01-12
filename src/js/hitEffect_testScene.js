@@ -185,7 +185,7 @@ function onMouseDown(event) {
         let temp = hitObjectPool.GetObject(intersects[0].point);
         if (temp != null)
         {
-            console.log('object : ', temp.object);
+            console.log('object : ', temp);
             scene.add( temp.object );
         }
 

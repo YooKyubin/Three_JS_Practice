@@ -1,12 +1,9 @@
 import * as THREE from 'three';
 
-import Stats from 'three/addons/libs/stats.module.js';
 
-const numParticles = 100;
-
-
+const numParticles = 30;
 const gravity = -9.8;
-const Clock = new THREE.Clock();
+const groundHeight = new THREE.Vector3(0, 0, 0);
 
 
 class blood
@@ -22,8 +19,9 @@ class blood
     particleStart = []
     velocity = new Float32Array( numParticles * 3 );
     initVelocity = new Float32Array( numParticles * 3 );
+    particleInitSize = 0.3;
+    localGroundHeight;
 
-    // virtual function 만드는 법 모름
     constructor( ) 
     { 
         this.#init();
@@ -59,16 +57,16 @@ class blood
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
         const material = new THREE.PointsMaterial( { color: 0xff0000, sizeAttenuation: true } );
-        material.size = 0.3;
+        material.size = 0.2;
     
-        this.particles = new THREE.Points( geometry, material );
+        this.object = new THREE.Points( geometry, material );
     
         // calculate random explostion location
         let half = origin.clone().add(t1).multiplyScalar(0.5);
         let perpendicular = generateRandomPerpendicularVector(half);
         perpendicular.normalize();
         let explosionLoc = half.clone().add(perpendicular.multiplyScalar(0.5));
-        console.log("explotsionLoc : ", explosionLoc);
+        explosionLoc.y += -0.6; // 피가 아래에서 위로 튀기도록 하기 위함
     
         for (let i=0; i<numParticles; ++i)
         {
@@ -85,6 +83,10 @@ class blood
             this.initVelocity[ cur     ] = initVec.x * 4;
             this.initVelocity[ cur + 1 ] = initVec.y * 4;
             this.initVelocity[ cur + 2 ] = initVec.z * 4;
+
+            this.velocity[ cur     ] = this.initVelocity[ cur     ];
+            this.velocity[ cur + 1 ] = this.initVelocity[ cur + 1 ];
+            this.velocity[ cur + 2 ] = this.initVelocity[ cur + 2 ];
         }
     }
 
@@ -95,18 +97,27 @@ class blood
             vec3.y + Math.random() * 0.2 - 0.1, 
             vec3.z + Math.random() * 0.2 - 0.1
         );
+        
+        let target;
+        target = this.object.worldToLocal(groundHeight);
+        this.localGroundHeight = target.y;
+        console.log('target . y', target.y);
+        console.log('local ground height : ' , this.localGroundHeight);
     }
 
     SetActive(active)
-    { 
+    {
         this.active = active;
 
         if (active)
         {
+            console.log('set active true', this.active);
             this.object.visible = true;
+            console.log('object position : ', this.object.position);
         }
         else
         {
+            console.log('set active false', this.active);
             this.object.visible = false;
         }
     }
@@ -124,46 +135,53 @@ class blood
             return;
         }
     
-        console.log(this.object);
         const positions = this.object.geometry.attributes.position.array;
         
         for ( let i = 0; i < numParticles; i++ ) {
             let cur = i * 3;
             
-            if (positions[ cur + 1 ] <= 0)
-            {
-                positions[ cur + 1] = 0;
-                continue;
-            }
+            // if (positions[ cur + 1 ] <= this.localGroundHeight)
+            // {
+            //     positions[ cur + 1] = this.localGroundHeight;
+            //     continue;
+            // }
             
-            velocity[ cur     ];
-            velocity[ cur + 1 ] += gravity * dt;
-            velocity[ cur + 2 ];
+            this.velocity[ cur     ];
+            this.velocity[ cur + 1 ] += gravity * dt;
+            this.velocity[ cur + 2 ];
             
-            positions[ cur     ] += velocity[ cur     ] * dt;
-            positions[ cur + 1 ] += velocity[ cur + 1 ] * dt;
-            positions[ cur + 2 ] += velocity[ cur + 2 ] * dt;
+            positions[ cur     ] += this.velocity[ cur     ] * dt;
+            positions[ cur + 1 ] += this.velocity[ cur + 1 ] * dt;
+            positions[ cur + 2 ] += this.velocity[ cur + 2 ] * dt;
         
         }
     
-        particles.geometry.attributes.position.needsUpdate = true;
+        this.object.geometry.attributes.position.needsUpdate = true;
+
+        let t = (this.timeElapse / this.duration);
+        this.object.material.size = ( this.particleInitSize - 0.0 ) * Math.cos(t * Math.PI / 2); 
         
-        timeElapse += dt;
+        this.timeElapse += dt;
     }
  
     
     Reset()
     {
-        this.velocity = this.initVelocity;
         const positions = this.object.geometry.attributes.position.array;
         for (let i=0; i<numParticles; ++i)
         {   
-            positions[ i*3   ] = this.particleStart.x;
-            positions[ i*3+1 ] = this.particleStart.y;
-            positions[ i*3+2 ] = this.particleStart.z;
+            this.velocity[i*3] = this.initVelocity[i];
+            this.velocity[i*3+1] = this.initVelocity[i*3+1];
+            this.velocity[i*3+2] = this.initVelocity[i*3+1];
+            
+            positions[ i*3   ] = this.particleStart[i].x;
+            positions[ i*3+1 ] = this.particleStart[i].y;
+            positions[ i*3+2 ] = this.particleStart[i].z;
         }
 
         this.timeElapse = 0;
+        this.object.geometry.attributes.position.needsUpdate = true;
+
     }
 }
 

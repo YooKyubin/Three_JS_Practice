@@ -69,7 +69,10 @@ function init() {
         for (let j=-10; j<10; j+=6)
         {
             let y = 1/4 * i + -1/2 * j + 2;
-            let temp = hitObjectPool.GetObject(new THREE.Vector3(i, y, j));
+            let cameraDir = new THREE.Vector3(0, 0, -1);
+            camera.getWorldDirection( cameraDir );
+            console.log("cameraDir : ", cameraDir );
+            let temp = hitObjectPool.GetObject(new THREE.Vector3(i, y, j), new THREE.Vector3(1, 0, 0) );
             if (temp != null)
             {
                 console.log('object : ', temp.object);
@@ -77,6 +80,8 @@ function init() {
             }
             let tempcube = cube.clone();
             tempcube.position.set(i, y, j);
+            // tempcube.lookAt( temp.cube.position.clone().add());
+            // tempcube.lookAt( 0, 0, 0);
             scene.add( tempcube );
         }
     }
@@ -179,10 +184,13 @@ function onMouseDown(event) {
 
     if (intersects.length > 0) {
         // 첫 번째 교차점의 월드 좌표 출력
-        console.log('클릭한 위치의 월드 좌표:', intersects[0].point);
+        // console.log('클릭한 위치의 월드 좌표:', intersects[0].point);
 
-
-        let temp = hitObjectPool.GetObject(intersects[0].point);
+        let cameraDir = camera.position.clone().multiplyScalar(-1);
+        cameraDir.y = 0;
+        cameraDir.normalize();
+        console.log("cameraDir : ", cameraDir );
+        let temp = hitObjectPool.GetObject(intersects[0].point,  cameraDir ); // 카메라 바라보는 방향으로 
         if (temp != null)
         {
             console.log('object : ', temp.object);

@@ -23,7 +23,7 @@ class objectPool
         }
     }
 
-    GetObject( position )
+    GetObject( position, direction )
     {
         for (let i =0; i<this.count; ++i)
         {
@@ -31,6 +31,7 @@ class objectPool
                 continue;
 
             this.pool[i].SetPosition( position );
+            this.pool[i].object.lookAt( direction.clone().add( this.pool[i].object.position ) ); // direction + object.position
             this.pool[i].SetActive( true );
             return this.pool[i];
         }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 
-const numParticles = 30;
+const numParticles = 20;
 const gravity = -9.8;
 const groundHeight = new THREE.Vector3(0, 0, 0);
 
@@ -39,7 +39,7 @@ class blood
     
         // random line generate
         let origin = new THREE.Vector3(0, 0, 0);
-        let t1 = origin.clone().add(new THREE.Vector3(Math.random(), Math.random(), Math.random()));
+        let t1 = origin.clone().add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5));
         t1.normalize();
     
         const vertices = [];
@@ -57,7 +57,7 @@ class blood
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
         const material = new THREE.PointsMaterial( { color: 0xff0000, sizeAttenuation: true } );
-        material.size = 0.2;
+        material.size = this.particleInitSize;
     
         this.object = new THREE.Points( geometry, material );
     
@@ -67,6 +67,7 @@ class blood
         perpendicular.normalize();
         let explosionLoc = half.clone().add(perpendicular.multiplyScalar(0.5));
         explosionLoc.y += -0.6; // 피가 아래에서 위로 튀기도록 하기 위함
+        explosionLoc.z += -1; // 피가 오브젝트의 0, 0, -1 방향으로 튀기도록
     
         for (let i=0; i<numParticles; ++i)
         {
@@ -101,8 +102,8 @@ class blood
         let target;
         target = this.object.worldToLocal(groundHeight);
         this.localGroundHeight = target.y;
-        console.log('target . y', target.y);
-        console.log('local ground height : ' , this.localGroundHeight);
+        // console.log('target . y', target.y);
+        // console.log('local ground height : ' , this.localGroundHeight);
     }
 
     SetActive(active)
@@ -111,13 +112,13 @@ class blood
 
         if (active)
         {
-            console.log('set active true', this.active);
+            // console.log('set active true', this.active);
             this.object.visible = true;
-            console.log('object position : ', this.object.position);
+            // console.log('object position : ', this.object.position);
         }
         else
         {
-            console.log('set active false', this.active);
+            // console.log('set active false', this.active);
             this.object.visible = false;
         }
     }
@@ -170,9 +171,9 @@ class blood
         const positions = this.object.geometry.attributes.position.array;
         for (let i=0; i<numParticles; ++i)
         {   
-            this.velocity[i*3] = this.initVelocity[i];
+            this.velocity[i*3] = this.initVelocity[i*3];
             this.velocity[i*3+1] = this.initVelocity[i*3+1];
-            this.velocity[i*3+2] = this.initVelocity[i*3+1];
+            this.velocity[i*3+2] = this.initVelocity[i*3+2];
             
             positions[ i*3   ] = this.particleStart[i].x;
             positions[ i*3+1 ] = this.particleStart[i].y;
@@ -187,7 +188,7 @@ class blood
 
 function generateRandomPerpendicularVector( givenVector )
 {
-    var randomVector = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+    var randomVector = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     
     // 주어진 벡터와 수직인 벡터를 찾기 위한 외적 계산
     var perpendicularVector = givenVector.clone().cross(randomVector);

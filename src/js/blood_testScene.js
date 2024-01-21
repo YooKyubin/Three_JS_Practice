@@ -11,9 +11,9 @@ import { blood } from './blood.js';
 import { objectPool } from './objectPool.js';
 
 const params = {
-    threshold: 1,
-    strength: 1,
-    radius: 0.5,
+    threshold: 0,
+    strength: 0,
+    radius: 0.0,
     exposure: 1
 };
 
@@ -57,7 +57,20 @@ function init() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshBasicMaterial( {color : 0xffffff} ); 
         cube = new THREE.Mesh( geometry, material );
+        cube.position.set(0, 0, 0);
         scene.add( cube );
+    }
+
+    let ground;
+    {
+        const geometry = new THREE.PlaneGeometry(50, 50);
+        const material = new THREE.MeshBasicMaterial( {color : 0x444444, side: THREE.DoubleSide});
+        material.blending = THREE.AdditiveBlending;
+        material.opacity = 0.5
+        ground = new THREE.Mesh( geometry, material );
+        ground.lookAt(0, 1, 0);
+        ground.name = "ground";
+        scene.add(ground);
     }
 
 
@@ -69,6 +82,10 @@ function init() {
         for (let j=-10; j<10; j+=6)
         {
             let y = 1/4 * i + -1/2 * j + 2;
+
+            if (y < 1)
+                continue;
+
             let cameraDir = new THREE.Vector3(0, 0, -1);
             camera.getWorldDirection( cameraDir );
             console.log("cameraDir : ", cameraDir );
@@ -182,11 +199,11 @@ function onMouseDown(event) {
     // 광선과의 교차점을 찾음
     var intersects = raycaster.intersectObjects(scene.children);
 
-    if (intersects.length > 0) {
+    if (intersects.length > 0 && intersects[0].object.name != "ground") {
         // 첫 번째 교차점의 월드 좌표 출력
         // console.log('클릭한 위치의 월드 좌표:', intersects[0].point);
 
-        let cameraDir = camera.position.clone().multiplyScalar(-1);
+        let cameraDir = intersects[0].point.clone().add(camera.position.clone().multiplyScalar(-1));
         cameraDir.y = 0;
         cameraDir.normalize();
         console.log("cameraDir : ", cameraDir );

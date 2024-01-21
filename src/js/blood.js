@@ -9,7 +9,7 @@ const groundHeight = new THREE.Vector3(0, 0, 0);
 class blood
 {
     object = new THREE.Object3D();
-    duration = 1;
+    duration = 4;
     targetPosition = new THREE.Vector3(0, 0, 0);
     active = false;
     
@@ -99,11 +99,11 @@ class blood
             vec3.z + Math.random() * 0.2 - 0.1
         );
         
-        let target;
-        target = this.object.worldToLocal(groundHeight);
+        let target = groundHeight.clone();
+        this.object.worldToLocal(target);
+        console.log("target", target);
+        console.log("real", this.object.position.y - groundHeight.y);
         this.localGroundHeight = target.y;
-        // console.log('target . y', target.y);
-        // console.log('local ground height : ' , this.localGroundHeight);
     }
 
     SetActive(active)
@@ -141,11 +141,11 @@ class blood
         for ( let i = 0; i < numParticles; i++ ) {
             let cur = i * 3;
             
-            // if (positions[ cur + 1 ] <= this.localGroundHeight)
-            // {
-            //     positions[ cur + 1] = this.localGroundHeight;
-            //     continue;
-            // }
+            if (positions[ cur + 1 ] <= this.localGroundHeight + 0.1)
+            {
+                positions[ cur + 1] = this.localGroundHeight;
+                continue;
+            }
             
             this.velocity[ cur     ];
             this.velocity[ cur + 1 ] += gravity * dt;
